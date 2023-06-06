@@ -8,7 +8,6 @@ do
     # python noise_train.py $method "WebFace10" "log" $log_path
     # printf "mknoisedata "
     # python mknoisedata.py $method "WebFace10" "log" $log_path
-    # for rho in "0" "1" "2" "3" "4" #"0" "1" "2" "3" "4" "2" "4"
     # for dataset in "WebFace10" # "WebFace10" # "WebFace50" "WebFace10_" "VGGFace10" "CelebA10" # "WebFace10" 
     for model in "resnet50" # "resnet18" "resnet50" "mobilenet_v1" "inception_v3" # 
     # for quality in  "20" # "75" "80" "85"
