@@ -1,4 +1,4 @@
-GUE
+# GUE
 第一步：训练噪声 python noise_train.py
 
 第二步：生成不可学习数据集 python mknoisedata.py
