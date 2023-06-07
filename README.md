@@ -21,6 +21,6 @@ python train_model.py $method $model $log $log_path
 
 <!-- 噪声训练方法：
 * GUE: Generative Unlearnable Examples
-* UEs: Unlearnable Examples
+* UE: Unlearnable Examples
 * RUE: Robust Unlearnable Examples
 * TUE: Transferable Unlearnable Examples -->
