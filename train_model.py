@@ -244,7 +244,7 @@ for noise_prop in range(5,6):
         # ]
         model = torchvision.models.mobilenet_v2(num_classes=num_classes, block=InvertedResidual).to(device)
         # model = torchvision.models.mobilenet_v2(num_classes=num_classes,inverted_residual_setting=inverted_residual_setting).to(device)
-        model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
+        # model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
     elif modelname=='mobilenet_v1':
         from nets.mobilenet import MobileNetV1
         model = MobileNetV1(num_classes=num_classes).to(device)
