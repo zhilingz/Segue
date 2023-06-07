@@ -14,8 +14,8 @@ python mknoisedata.py
 python train_model.py
 ```
 
-噪声训练方法：
+<!-- 噪声训练方法：
 * GUE: Generative Unlearnable Examples
 * UE: Unlearnable Examples
 * RUE: Robust Unlearnable Examples
-* TUE: Transferable Unlearnable Examples
+* TUE: Transferable Unlearnable Examples -->
