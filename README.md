@@ -1,4 +1,3 @@
-# GUE
 第一步：训练噪声 
 ```
 python noise_train.py
