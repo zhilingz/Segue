@@ -63,9 +63,9 @@ if modelname=='mobilenet_v2':
     #     [1, 320, 1, 1],
     #     [1, 512, 3, 2],
     # ]
-    # model = torchvision.models.mobilenet_v2(num_classes=num_classes, block=InvertedResidual).to(device)
+    model = torchvision.models.mobilenet_v2(num_classes=num_classes, block=InvertedResidual).to(device)
     # model = torchvision.models.mobilenet_v2(num_classes=num_classes,inverted_residual_setting=inverted_residual_setting).to(device)
-    model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
+    # model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
     # model = Facenet(backbone=modelname, num_classes=num_classes).to(device)  
     # loss_fun = lambda logits, labels : torch.nn.NLLLoss()(F.log_softmax(logits, dim = -1), labels)  
     # if pretrain_model:

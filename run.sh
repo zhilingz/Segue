@@ -1,7 +1,7 @@
 log="log" # "log" "ter"
 log_path="loggue.txt"
 # python noise_train.py "GUE" "WebFace10" "log" $log_path
-for method in "GUE" #"GUE" "UEs" "RUE" "TUE" "_clean" 
+for method in "UEs" #"GUE" "UEs" "RUE" "TUE" "_clean" 
 do 
     # printf "%s %s\n" $method "WebFace10"
     # printf "noise_train "
