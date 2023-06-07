@@ -25,7 +25,6 @@ class BasicConv2d(nn.Module):
 
 
 class Block35(nn.Module):
-
     def __init__(self, scale=1.0):
         super(Block35,self).__init__()
 

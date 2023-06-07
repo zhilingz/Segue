@@ -46,6 +46,7 @@ class ul_method():
             print('bin_label:{}, kmeans_label:{}'.format(bin_label, kmeans_label))
             print('distortion layer')
             print(self.trans)
+            print(self.netG)
         elif method=='UEc': # 随机初始化10个类的噪声，perturbation的尺寸为[cls,3,size,size]
             self.lr_noise = Epsilon/10
             self.noise = torch.FloatTensor(*[num_classes,3,size,size]).uniform_(-Epsilon,Epsilon).to(device)
