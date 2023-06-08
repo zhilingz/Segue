@@ -1,3 +1,5 @@
+## Segue: Side-information Guided Generative Unlearnable Examples for Facial Privacy Protection in Real World 
+该项目是一个保护噪声生成算法，主要解决人脸信息被未经授权的神经网络学习的问题。
 ### 直接运行
 ```
 ./run.sh
