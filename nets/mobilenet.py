@@ -61,10 +61,10 @@ class MobileNetV1(nn.Module):
         self.fc = nn.Linear(1024, num_classes)
 
     def forward(self, x):
-        x = self.stage1(x)
-        x = self.stage2(x)
-        x = self.stage3(x)
-        x = self.avg(x)
+        x = self.stage1(x) # [16, 3, 224, 224] -> [16, 256, 33, 33]
+        x = self.stage2(x) # ->[16, 512, 19, 19]
+        x = self.stage3(x) # ->[16, 1024, 12, 12]
+        x = self.avg(x)    # ->[16, 1024, 1, 1]
         # x = self.model(x)
         x = x.view(-1, 1024)
         x = self.fc(x)
