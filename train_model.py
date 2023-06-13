@@ -256,8 +256,8 @@ for noise_prop in range(5,6):
             model.conv1 = torch.nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False).to(device)
             model.maxpool = torch.nn.MaxPool2d(kernel_size=1, stride=1, padding=0).to(device)
     elif modelname=='resnet50':
-        # model = torchvision.models.resnet._resnet('resnet50', Bottleneck, [3, 4, 6, 3], False, True, num_classes=num_classes).to(device)
-        model = torchvision.models.resnet50(num_classes=num_classes).to(device)
+        model = torchvision.models.resnet._resnet('resnet50', Bottleneck, [3, 4, 6, 3], False, True, num_classes=num_classes).to(device)
+        # model = torchvision.models.resnet50(num_classes=num_classes).to(device)
     elif modelname=='resnet34':
         model = torchvision.models.resnet34(num_classes=num_classes).to(device)
     
