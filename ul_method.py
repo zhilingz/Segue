@@ -1,12 +1,14 @@
 import time
 import collections
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
+
 from models import Generator
 from models import weights_init
-import numpy as np
+from unet import UNet
 
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
@@ -27,12 +29,13 @@ class ul_method():
             self.atk_Epsilon = int(rho)/255 # 对抗训练噪声的强度应该小于不可学习噪声强度
             self.atk_step_size = self.atk_Epsilon/5 # 对抗训练更新大小
             self.atk_step = 5 
-            self.netG = Generator(3,3,label_feature,num_classes,bin_label,kmeans_label,datasetname).to(device)
+            # self.netG = Generator(3,3,label_feature,num_classes,bin_label,kmeans_label,datasetname).to(device)
+            self.netG = UNet(n_channels=3, n_classes=num_classes, kmeans_label=kmeans_label).to(device) #, bilinear=args.bilinear)
             # sum_p = 0
             # for p in self.netG.parameters():
             #     sum_p +=p.numel()
             # initialize all weights
-            self.model_init(label_feature,kmeans_label)
+            # self.model_init(label_feature,kmeans_label)
             # self.netG.load_state_dict(torch.load('ul_models/WebFace10_GUE224t10.pth'))
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(),lr=self.lr_noise)
             self.trans = transforms.Compose([

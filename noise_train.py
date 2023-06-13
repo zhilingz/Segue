@@ -104,7 +104,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=5e-4) #5e-4
 scheduler =  torch.optim.lr_scheduler.CosineAnnealingLR(optimizer = optimizer, T_max =  epochs)
 print('surrogate model:', modelname)
 ul.model_eval(model, 0)
-pretrain_epoch = 3
+pretrain_epoch = 5
 for epoch in range(1, epochs+1):
     ul.loss_init()
     if epoch%5 == 1 or epoch < pretrain_epoch: # 隔几个epoch更新一次目标模型

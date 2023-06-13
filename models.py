@@ -123,12 +123,12 @@ class Generator(nn.Module):
         ex_channel = self.bin_num if bin_label else num_classes
         norm_layer = nn.BatchNorm2d # BatchNorm2d InstanceNorm2d LayerNorm
         kernelsize1and1 = True # 是否使用1*1卷积
-        groupsconv = False # 是否使用分组卷积
+        groupsconv = True # 是否使用分组卷积
         channel_setting_encoder = [
             #ci   co   s
             [3,   8,   1],
-            [8,   16,  2],
-            [16,  32,  2],
+            [8,   32,  2],
+            [32,  128,  2],
             # [32,  64,  2],
             # [64,  128, 2],
             # [128, 256, 2],
@@ -137,12 +137,15 @@ class Generator(nn.Module):
         channel_setting_decoder = [
             # ci  co   k  s
             # [512, 256, 3, 2],
-            # [256, 128,  4, 2],
-            # [128,  64,  4, 2],
-            # [64,   32,  4, 2],
-            [32,   16,  3,2],#4, 2],
-            [16,    8,  3,2],#4, 2],
-            [8,     3,  6,1],#3, 1],
+            # [256, 128, 4, 2],
+            # [128,  64, 4, 2],
+            # [64,   32, 4, 2],
+            # [32,   16, 3,2],# 4, 2],
+            # [16,    8, 3,2],# 4, 2],
+            # [8,     3, 6,1],# 3, 1],
+            [128,   32, 3,2],# 4, 2],
+            [32,    8, 3,2],# 4, 2],
+            [8,     3, 6,1],# 3, 1],
         ]
         encoder_lis = []
         for setting in channel_setting_encoder:
@@ -206,10 +209,10 @@ class Generator(nn.Module):
             nn.ReLU(),
         ]
         bottle_neck_lis = [
-            ResnetBlock(bottle_channel),
-            ResnetBlock(bottle_channel),
-            ResnetBlock(bottle_channel),
-            ResnetBlock(bottle_channel),
+            ResnetBlock(dim=bottle_channel, groupsconv=groupsconv),
+            ResnetBlock(dim=bottle_channel, groupsconv=groupsconv),
+            ResnetBlock(dim=bottle_channel, groupsconv=groupsconv),
+            ResnetBlock(dim=bottle_channel, groupsconv=groupsconv),
             ]
         # decoder_lis = [
         #     # 256 2 2
@@ -1083,8 +1086,8 @@ class InvertedResidual(nn.Module):
                                             #  activation_layer=nn.ReLU6))
         layers.extend([
             # dw
-            # ConvNormActivation(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer,
-            ConvNormActivation(hidden_dim, hidden_dim, stride=stride, norm_layer=norm_layer,
+            ConvNormActivation(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer,
+            # ConvNormActivation(hidden_dim, hidden_dim, stride=stride, norm_layer=norm_layer,
                                activation_layer=nn.ReLU6),
             # pw-linear
             nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
@@ -1130,11 +1133,11 @@ class MNIST_target_net(nn.Module):
 # Define a resnet block
 # modified from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py
 class ResnetBlock(nn.Module):
-    def __init__(self, dim, padding_type='reflect', norm_layer=nn.BatchNorm2d, use_dropout=False, use_bias=False):
+    def __init__(self, dim, padding_type='reflect', norm_layer=nn.BatchNorm2d, use_dropout=False, use_bias=False, groupsconv=False):
         super(ResnetBlock, self).__init__()
-        self.conv_block = self.build_conv_block(dim, padding_type, norm_layer, use_dropout, use_bias)
+        self.conv_block = self.build_conv_block(dim, padding_type, norm_layer, use_dropout, use_bias, groupsconv)
 
-    def build_conv_block(self, dim, padding_type, norm_layer, use_dropout, use_bias):
+    def build_conv_block(self, dim, padding_type, norm_layer, use_dropout, use_bias, groupsconv):
         conv_block = []
         p = 0 # 先padding再卷积，不改变图片尺寸
         if padding_type == 'reflect':
@@ -1145,8 +1148,11 @@ class ResnetBlock(nn.Module):
             p = 1
         else:
             raise NotImplementedError('padding [%s] is not implemented' % padding_type)
-
-        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, groups=dim, bias=use_bias), #
+        if groupsconv:
+            groups = dim
+        else:
+            groups = 1
+        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, groups=groups, bias=use_bias),
                        norm_layer(dim),
                        nn.ReLU(True)]
         if use_dropout:
@@ -1162,7 +1168,7 @@ class ResnetBlock(nn.Module):
         else:
             raise NotImplementedError('padding [%s] is not implemented' % padding_type)
 
-        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, groups=dim, bias=use_bias),
+        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, groups=groups, bias=use_bias),
                        norm_layer(dim)]
 
         return nn.Sequential(*conv_block)

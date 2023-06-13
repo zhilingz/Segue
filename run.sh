@@ -9,7 +9,7 @@ do
     # printf "mknoisedata "
     # python mknoisedata.py $method "WebFace10" "log" $log_path
     # for dataset in "WebFace10" # "WebFace10" # "WebFace50" "WebFace10_" "VGGFace10" "CelebA10" # "WebFace10" 
-    for model in "resnet50" # "resnet18" "resnet50" "mobilenet_v1" "mobilenet_v2" "inception_v3" # 
+    for model in "mobilenet_v2" # "resnet18" "resnet50" "mobilenet_v1" "mobilenet_v2" "inception_v3" # 
     # for quality in  "20" # "75" "80" "85"
     # for sigma in '1' '2' '3' '4' '5' 
     do
