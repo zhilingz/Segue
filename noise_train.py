@@ -4,7 +4,7 @@ import time
 import torch
 import torchvision
 import torch.nn.functional as F
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(0) # 固定随机种子，方便做对照试验
 torch.cuda.manual_seed(0)
