@@ -1,6 +1,6 @@
 ## Segue: Side-information Guided Generative Unlearnable Examples for Facial Privacy Protection in Real World 
 This project is a protective noise generation algorithm, which mainly solves the problem of face information being learned by unauthorized neural networks.
-### 直接运行
+### run
 ```
 ./run.sh
 ```
