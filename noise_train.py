@@ -30,7 +30,7 @@ kmeans_label = False # 使用预训练的人脸提取器提取人脸128维特征
 # dataset setting
 root = '/data/zhangzhiling/'
 method = sys.argv[1] # GUE UEc UEs TUE RUE
-datasetname = "WebFace10"  # sys.argv[2] WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
+datasetname = "CIFAR10"  # sys.argv[2] WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
 modelname =  sys.argv[2] #'resnet18' # resnet18 mobilenet_v2 inception_v3
 img_size = 32 if 'CIFAR10' in datasetname else 224
 batch_size = 128 if method == 'TUE' or 'CIFAR10' in datasetname else 16

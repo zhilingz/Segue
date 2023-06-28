@@ -171,7 +171,7 @@ for noise_prop in range(5,6):
     tensorboard = True # 启用tensorboard
     modelname = sys.argv[2] # # resnet18 mobilenet inception_resnetv1 sys.argv[2] 
     method = sys.argv[1] # UEc UEs RUE GUE random
-    datasetname = 'WebFace10' # # WebFace10 WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
+    datasetname = 'CIFAR10' # # WebFace10 WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
     
     resize = 32 if 'CIFAR10' in datasetname else 224
     pretrain_model = False

@@ -551,21 +551,21 @@ class Generator(nn.Module):
 #         self.embedding_size = 128
 #         self.bin_num = 16 # bin编码的位数
 #         ex_channel = self.bin_num if bin_label else num_classes
-#         # encoder_lis = [
-#         #     # MNIST:1*28*28
-#         #     nn.Conv2d(gen_input_nc, 8, kernel_size=3, stride=1, padding=0, bias=True),
-#         #     nn.InstanceNorm2d(8),
-#         #     nn.ReLU(),
-#         #     # 8*26*26
-#         #     nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=0, bias=True),
-#         #     nn.InstanceNorm2d(16),
-#         #     nn.ReLU(),
-#         #     # 16*12*12
-#         #     nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=0, bias=True),
-#         #     nn.InstanceNorm2d(32),
-#         #     nn.ReLU(),
-#         #     # 32*5*5
-#         # ]
+        encoder_lis = [
+            # MNIST:1*28*28
+            nn.Conv2d(gen_input_nc, 8, kernel_size=3, stride=1, padding=0, bias=True),
+            nn.InstanceNorm2d(8),
+            nn.ReLU(),
+            # 8*26*26
+            nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=0, bias=True),
+            nn.InstanceNorm2d(16),
+            nn.ReLU(),
+            # 16*12*12
+            nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=0, bias=True),
+            nn.InstanceNorm2d(32),
+            nn.ReLU(),
+            # 32*5*5
+        ]
 #         # encoder_lis = [
 #         #     # MNIST:1*28*28
 #         #     nn.Conv2d(gen_input_nc, 8, kernel_size=1, stride=1, padding=0, bias=True),
@@ -1072,7 +1072,7 @@ class InvertedResidual(nn.Module):
         assert stride in [1, 2]
 
         if norm_layer is None:
-            norm_layer = nn.LayerNorm # BatchNorm2d InstanceNorm2d LayerNorm
+            norm_layer = nn.BatchNorm2d # BatchNorm2d InstanceNorm2d LayerNorm
 
         hidden_dim = int(round(inp * expand_ratio))
         self.use_res_connect = self.stride == 1 and inp == oup
@@ -1080,18 +1080,17 @@ class InvertedResidual(nn.Module):
         layers: List[nn.Module] = []
         if expand_ratio != 1:
             # pw
-            layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer,
+            # layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer,
+            layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=3, padding=1, norm_layer=norm_layer,
                                              activation_layer=nn.ReLU6))
-            # layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=3, padding=1, norm_layer=norm_layer,
-                                            #  activation_layer=nn.ReLU6))
         layers.extend([
             # dw
             ConvNormActivation(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer,
             # ConvNormActivation(hidden_dim, hidden_dim, stride=stride, norm_layer=norm_layer,
                                activation_layer=nn.ReLU6),
             # pw-linear
-            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            # nn.Conv2d(hidden_dim, oup, 3, 1, 1, bias=False),
+            # nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            nn.Conv2d(hidden_dim, oup, 3, 1, 1, bias=False),
             norm_layer(oup),
         ])
         self.conv = nn.Sequential(*layers)
