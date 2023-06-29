@@ -121,117 +121,146 @@ class Generator(nn.Module):
         self.embedding_size = 128
         self.bin_num = 16 # bin编码的位数
         ex_channel = self.bin_num if bin_label else num_classes
-        bottle_channel = 256
-        encoder_lis = [
-            # MNIST:1*28*28
-            nn.Conv2d(gen_input_nc, 8, kernel_size=1, stride=1, padding=0, bias=True),
-            # nn.Conv2d(gen_input_nc, 8, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.InstanceNorm2d(8),
-            nn.Conv2d(8, 8, kernel_size=3, stride=1, padding=0, groups=8, bias=True),
-            nn.InstanceNorm2d(8),
-            nn.ReLU(),
-            # 8*26*26
-            nn.Conv2d(8, 16, kernel_size=1, stride=1, padding=0, bias=True),
-            # nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.InstanceNorm2d(16),
-            nn.Conv2d(16, 16, kernel_size=3, stride=2, padding=0, groups=16, bias=True),
-            nn.InstanceNorm2d(16),
-            nn.ReLU(),
-            # 16*12*12
-            nn.Conv2d(16, 32, kernel_size=1, stride=1, padding=0, bias=True),
-            # nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.InstanceNorm2d(32),
-            nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=0, groups=32, bias=True),
-            nn.InstanceNorm2d(32),
-            nn.ReLU(),
-            # 32*5*5
-            nn.Conv2d(32, 64, kernel_size=1, stride=1, padding=0, bias=True),
-            nn.InstanceNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=0, groups=64, bias=True),
-            nn.InstanceNorm2d(64),
-            nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=True),
-            nn.InstanceNorm2d(128),
-            nn.Conv2d(128, 128, kernel_size=3, stride=2, padding=0, groups=128, bias=True),
-            nn.InstanceNorm2d(128),
-            nn.ReLU(),
-            nn.Conv2d(128, 256, kernel_size=1, stride=1, padding=0, bias=True),
-            nn.InstanceNorm2d(256),
-            nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=0, groups=256, bias=True),
-            nn.InstanceNorm2d(256),
-            nn.ReLU(),
-            # nn.Conv2d(256, 512, kernel_size=1, stride=1, padding=0, bias=True),
-            # nn.InstanceNorm2d(512),
-            # nn.Conv2d(512, 512, kernel_size=3, stride=2, padding=0, groups=512, bias=True),
-            # nn.InstanceNorm2d(512),
-            # nn.ReLU(),
+        norm_layer = nn.BatchNorm2d # BatchNorm2d InstanceNorm2d LayerNorm
+        kernelsize1and1 = True # 是否使用1*1卷积
+        groupsconv = True # 是否使用分组卷积
+        channel_setting_encoder = [
+            #ci   co   s
+            [3,   8,   1],
+            [8,   32,  2],
+            [32,  128,  2],
+            # [32,  64,  2],
+            # [64,  128, 2],
+            # [128, 256, 2],
+            # [256, 512, 2],
         ]
+        channel_setting_decoder = [
+            # ci  co   k  s
+            # [512, 256, 3, 2],
+            # [256, 128, 4, 2],
+            # [128,  64, 4, 2],
+            # [64,   32, 4, 2],
+            # [32,   16, 3,2],# 4, 2],
+            # [16,    8, 3,2],# 4, 2],
+            # [8,     3, 6,1],# 3, 1],
+            [128,   32, 3,2],# 4, 2],
+            [32,    8, 3,2],# 4, 2],
+            [8,     3, 6,1],# 3, 1],
+        ]
+        encoder_lis = []
+        for setting in channel_setting_encoder:
+            encoder_lis += self._make_layer_encoder(norm_layer,setting[0],setting[1],setting[2],kernelsize1and1,groupsconv)
+        decoder_lis = []
+        for setting in channel_setting_decoder:
+            decoder_lis += self._make_layer_decoder(norm_layer,setting[0],setting[1],setting[2],setting[3],kernelsize1and1,groupsconv)
+        
+        # encoder_lis = [
+        #     # 3 224 224
+        #     nn.Conv2d(gen_input_nc, 8, kernel_size=1, stride=1, padding=0, bias=True),
+        #     # nn.Conv2d(gen_input_nc, 8, kernel_size=3, stride=1, padding=1, bias=True),
+        #     norm_layer(8),
+        #     nn.Conv2d(8, 8, kernel_size=3, stride=1, padding=0, groups=8, bias=True),
+        #     norm_layer(8),
+        #     nn.ReLU(),
+        #     # 8 222 222
+        #     nn.Conv2d(8, 16, kernel_size=1, stride=1, padding=0, bias=True),
+        #     # nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1, bias=True),
+        #     norm_layer(16),
+        #     nn.Conv2d(16, 16, kernel_size=3, stride=2, padding=0, groups=16, bias=True),
+        #     norm_layer(16),
+        #     nn.ReLU(),
+        #     # 16 110 110
+        #     nn.Conv2d(16, 32, kernel_size=1, stride=1, padding=0, bias=True),
+        #     # nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1, bias=True),
+        #     norm_layer(32),
+        #     nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=0, groups=32, bias=True),
+        #     norm_layer(32),
+        #     nn.ReLU(),
+        #     # 32 54 54 
+        #     nn.Conv2d(32, 64, kernel_size=1, stride=1, padding=0, bias=True),
+        #     norm_layer(64),
+        #     nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=0, groups=64, bias=True),
+        #     norm_layer(64),
+        #     nn.ReLU(),
+        #     # 64 26 26
+        #     nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=True),
+        #     norm_layer(128),
+        #     nn.Conv2d(128, 128, kernel_size=3, stride=2, padding=0, groups=128, bias=True),
+        #     norm_layer(128),
+        #     nn.ReLU(),
+        #     # 128 12 12
+        #     nn.Conv2d(128, 256, kernel_size=1, stride=1, padding=0, bias=True),
+        #     norm_layer(256),
+        #     nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=0, groups=256, bias=True),
+        #     norm_layer(256),
+        #     nn.ReLU(),
+        #     # 256 5 5
+        #     nn.Conv2d(256, 512, kernel_size=1, stride=1, padding=0, bias=True),
+        #     norm_layer(512),
+        #     nn.Conv2d(512, 512, kernel_size=3, stride=2, padding=0, groups=512, bias=True),
+        #     norm_layer(512),
+        #     nn.ReLU(),
+        #     # 256 2 2
+        # ]
+        bottle_channel = channel_setting_encoder[-1][1]
         Csqueeze_lis = [
             nn.Conv2d(bottle_channel+ex_channel, bottle_channel, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.InstanceNorm2d(bottle_channel),
+            norm_layer(bottle_channel),
             nn.ReLU(),
         ]
         bottle_neck_lis = [
-            ResnetBlock(bottle_channel),
-            ResnetBlock(bottle_channel),
-            ResnetBlock(bottle_channel),
-            ResnetBlock(bottle_channel),
+            ResnetBlock(dim=bottle_channel, groupsconv=groupsconv),
+            ResnetBlock(dim=bottle_channel, groupsconv=groupsconv),
+            ResnetBlock(dim=bottle_channel, groupsconv=groupsconv),
+            ResnetBlock(dim=bottle_channel, groupsconv=groupsconv),
             ]
         # decoder_lis = [
-        #     nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=0, bias=False),
-        #     nn.InstanceNorm2d(16),
+        #     # 256 2 2
+        #     nn.ConvTranspose2d(512, 512, kernel_size=3, stride=2, padding=0, groups=512, bias=False),
+        #     norm_layer(512),
+        #     nn.ConvTranspose2d(512, 256, kernel_size=1, stride=1, padding=0, bias=False),
+        #     norm_layer(256),
         #     nn.ReLU(),
-        #     # state size. 16 x 11 x 11
-        #     nn.ConvTranspose2d(16, 8, kernel_size=3, stride=2, padding=0, bias=False),
-        #     nn.InstanceNorm2d(8),
+        #     # 256 5 5
+        #     nn.ConvTranspose2d(256, 256, kernel_size=4, stride=2, padding=0, groups=256, bias=False),
+        #     norm_layer(256),
+        #     nn.ConvTranspose2d(256, 128, kernel_size=1, stride=1, padding=0, bias=False),
+        #     norm_layer(128),
         #     nn.ReLU(),
-        #     # state size. 8 x 23 x 23
-        #     nn.ConvTranspose2d(8, image_nc, kernel_size=6, stride=1, padding=0, bias=False),
+        #     # 128 12 12
+        #     nn.ConvTranspose2d(128, 128, kernel_size=4, stride=2, padding=0, groups=128, bias=False),
+        #     norm_layer(128),
+        #     nn.ConvTranspose2d(128, 64, kernel_size=1, stride=1, padding=0, bias=False),
+        #     norm_layer(64),
+        #     nn.ReLU(),
+        #     # 64 26 26
+        #     nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=0, groups=64, bias=False),
+        #     norm_layer(64),
+        #     nn.ConvTranspose2d(64, 32, kernel_size=1, stride=1, padding=0, bias=False),
+        #     norm_layer(32),
+        #     nn.ReLU(),
+        #     # 32 54 54
+        #     nn.ConvTranspose2d(32, 32, kernel_size=4, stride=2, padding=0, groups=32, bias=False),
+        #     norm_layer(32),
+        #     # nn.ConvTranspose2d(32, 16, kernel_size=3, stride=1, padding=1, bias=False),
+        #     nn.ConvTranspose2d(32, 16, kernel_size=1, stride=1, padding=0, bias=False),
+        #     norm_layer(16),
+        #     nn.ReLU(),
+        #     # 16 110 110
+        #     nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=0, groups=16, bias=False),
+        #     norm_layer(16),
+        #     # nn.ConvTranspose2d(16, 8, kernel_size=3, stride=1, padding=1, bias=False),
+        #     nn.ConvTranspose2d(16, 8, kernel_size=1, stride=1, padding=0, bias=False),
+        #     norm_layer(8),
+        #     nn.ReLU(),
+        #     # 8 222 222
+        #     nn.ConvTranspose2d(8, 8, kernel_size=3, stride=1, padding=0, groups=8, bias=False),
+        #     norm_layer(8),
+        #     # nn.ConvTranspose2d(8, image_nc, kernel_size=3, stride=1, padding=1, bias=False),
+        #     nn.ConvTranspose2d(8, 3, kernel_size=1, stride=1, padding=0, bias=False),
         #     nn.Tanh()
-        #     # state size. image_nc x 28 x 28
+        #     # 3 224 224
         # ]
-        decoder_lis = [
-            # nn.ConvTranspose2d(512, 512, kernel_size=3, stride=2, padding=0, groups=512, bias=False),
-            # nn.InstanceNorm2d(512),
-            # nn.ConvTranspose2d(512, 256, kernel_size=1, stride=1, padding=0, bias=False),
-            # nn.InstanceNorm2d(256),
-            # nn.ReLU(),
-            nn.ConvTranspose2d(256, 256, kernel_size=3, stride=2, padding=0, groups=256, bias=False),
-            nn.InstanceNorm2d(256),
-            nn.ConvTranspose2d(256, 128, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.InstanceNorm2d(128),
-            nn.ReLU(),
-            nn.ConvTranspose2d(128, 128, kernel_size=3, stride=2, padding=0, groups=128, bias=False),
-            nn.InstanceNorm2d(128),
-            nn.ConvTranspose2d(128, 64, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.InstanceNorm2d(64),
-            nn.ReLU(),
-            nn.ConvTranspose2d(64, 64, kernel_size=3, stride=2, padding=0, groups=64, bias=False),
-            nn.InstanceNorm2d(64),
-            nn.ConvTranspose2d(64, 32, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.InstanceNorm2d(32),
-            nn.ReLU(),
-            nn.ConvTranspose2d(32, 32, kernel_size=3, stride=2, padding=0, groups=32, bias=False),
-            nn.InstanceNorm2d(32),
-            # nn.ConvTranspose2d(32, 16, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.ConvTranspose2d(32, 16, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.InstanceNorm2d(16),
-            nn.ReLU(),
-            # state size. 16 x 11 x 11
-            nn.ConvTranspose2d(16, 16, kernel_size=3, stride=2, padding=0, groups=16, bias=False),
-            nn.InstanceNorm2d(16),
-            # nn.ConvTranspose2d(16, 8, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.ConvTranspose2d(16, 8, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.InstanceNorm2d(8),
-            nn.ReLU(),
-            # state size. 8 x 23 x 23
-            nn.ConvTranspose2d(8, 8, kernel_size=6, stride=1, padding=0, groups=8, bias=False),
-            nn.InstanceNorm2d(8),
-            # nn.ConvTranspose2d(8, image_nc, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.ConvTranspose2d(8, image_nc, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.Tanh()
-            # state size. image_nc x 28 x 28
-        ]
 
         self.encoder = nn.Sequential(*encoder_lis)
         self.Csqueeze = nn.Sequential(*Csqueeze_lis)
@@ -245,6 +274,67 @@ class Generator(nn.Module):
                 f = open('ul_models/'+datasetname+'_k'+str(num_classes)+'.pickle','rb')
                 self.kmeans = pickle.load(f)
                 f.close()
+
+    def _make_layer_encoder(self, norm_layer, input_c, output_c, stride, kernelsize1and1, groupsconv) -> nn.Sequential:
+        layers = []
+        if kernelsize1and1:
+            layers.append(
+                nn.Conv2d(input_c, output_c, kernel_size=1, stride=1, padding=0, bias=True),
+            )
+        else:
+            layers.append(
+                nn.Conv2d(input_c, output_c, kernel_size=3, stride=1, padding=1, bias=True),
+            )
+
+        layers.append(
+            norm_layer(output_c),
+        )
+        if groupsconv:
+            layers.append(
+                nn.Conv2d(output_c, output_c, kernel_size=3, stride=stride, padding=0, groups=output_c, bias=True),
+            )    
+            
+        else:
+            layers.append(
+                nn.Conv2d(output_c, output_c, kernel_size=3, stride=stride, padding=0, bias=True),
+            )
+        layers.append(
+            norm_layer(output_c),
+        )
+        layers.append(
+            nn.ReLU(),
+        )
+        return layers
+
+    def _make_layer_decoder(self, norm_layer, input_c, output_c, kernel_size, stride, kernelsize1and1, groupsconv) -> nn.Sequential:
+        layers = []
+        if groupsconv:
+            layers.append(
+                nn.ConvTranspose2d(input_c, input_c, kernel_size=kernel_size, stride=stride, padding=0, groups=input_c, bias=False)
+            )
+        else:
+            layers.append(
+                nn.ConvTranspose2d(input_c, input_c, kernel_size=kernel_size, stride=stride, padding=0, bias=False)
+            )
+        layers.append(
+            norm_layer(input_c),
+        )
+        if kernelsize1and1:
+            layers.append(
+                nn.ConvTranspose2d(input_c, output_c, kernel_size=1, stride=1, padding=0, bias=False),
+            )
+        else:
+            layers.append(
+                nn.ConvTranspose2d(input_c, output_c, kernel_size=3, stride=1, padding=1, bias=False),
+            )
+        layers.append(
+            norm_layer(output_c),
+        )
+        layers.append(
+            nn.ReLU(),
+        )
+        return layers
+
 
     def forward(self, x, labels):
         # labels=(labels+3)%10 # 将一个类的噪声加到另一个类上，看噪声是否有效
@@ -283,6 +373,172 @@ class Generator(nn.Module):
             x = self.decoder(x)
         return x
 
+# class Generator(nn.Module):
+#     def __init__(self,gen_input_nc,image_nc,label_feature,num_classes,bin_label=True,kmeans_label=True,datasetname=None):
+#         super(Generator, self).__init__()
+
+#         self.label_feature = label_feature
+#         self.num_classes = num_classes
+#         self.bin_label = bin_label
+#         self.kmeans_label = kmeans_label
+#         self.embedding_size = 128
+#         self.bin_num = 16 # bin编码的位数
+#         ex_channel = self.bin_num if bin_label else num_classes
+#         encoder_lis = [
+#             # 3 224 224
+#             nn.Conv2d(gen_input_nc, 8, kernel_size=1, stride=1, padding=0, bias=True),
+#             # nn.Conv2d(gen_input_nc, 8, kernel_size=3, stride=1, padding=1, bias=True),
+#             nn.InstanceNorm2d(8),
+#             nn.Conv2d(8, 8, kernel_size=3, stride=1, padding=0, groups=8, bias=True),
+#             nn.InstanceNorm2d(8),
+#             nn.ReLU(),
+#             # 8 222 222
+#             nn.Conv2d(8, 16, kernel_size=1, stride=1, padding=0, bias=True),
+#             # nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1, bias=True),
+#             nn.InstanceNorm2d(16),
+#             nn.Conv2d(16, 16, kernel_size=3, stride=2, padding=0, groups=16, bias=True),
+#             nn.InstanceNorm2d(16),
+#             nn.ReLU(),
+#             # 16 110 110
+#             nn.Conv2d(16, 32, kernel_size=1, stride=1, padding=0, bias=True),
+#             # nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1, bias=True),
+#             nn.InstanceNorm2d(32),
+#             nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=0, groups=32, bias=True),
+#             nn.InstanceNorm2d(32),
+#             nn.ReLU(),
+#             # 32 54 54 
+#             nn.Conv2d(32, 64, kernel_size=1, stride=1, padding=0, bias=True),
+#             nn.InstanceNorm2d(64),
+#             nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=0, groups=64, bias=True),
+#             nn.InstanceNorm2d(64),
+#             nn.ReLU(),
+#             # 64 26 26
+#             nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0, bias=True),
+#             nn.InstanceNorm2d(128),
+#             nn.Conv2d(128, 128, kernel_size=3, stride=2, padding=0, groups=128, bias=True),
+#             nn.InstanceNorm2d(128),
+#             nn.ReLU(),
+#             # 128 12 12
+#             nn.Conv2d(128, 256, kernel_size=1, stride=1, padding=0, bias=True),
+#             nn.InstanceNorm2d(256),
+#             nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=0, groups=256, bias=True),
+#             nn.InstanceNorm2d(256),
+#             nn.ReLU(),
+#             # 256 5 5
+#             nn.Conv2d(256, 512, kernel_size=1, stride=1, padding=0, bias=True),
+#             nn.InstanceNorm2d(512),
+#             nn.Conv2d(512, 512, kernel_size=3, stride=2, padding=0, groups=512, bias=True),
+#             nn.InstanceNorm2d(512),
+#             nn.ReLU(),
+#         ]
+#         bottle_channel = 512
+#         Csqueeze_lis = [
+#             nn.Conv2d(bottle_channel+ex_channel, bottle_channel, kernel_size=3, stride=1, padding=1, bias=True),
+#             nn.InstanceNorm2d(bottle_channel),
+#             nn.ReLU(),
+#         ]
+#         bottle_neck_lis = [
+#             ResnetBlock(bottle_channel),
+#             ResnetBlock(bottle_channel),
+#             ResnetBlock(bottle_channel),
+#             ResnetBlock(bottle_channel),
+#             ]
+#         decoder_lis = [
+#             nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=0, groups=512, bias=False),
+#             nn.InstanceNorm2d(512),
+#             nn.ConvTranspose2d(512, 256, kernel_size=1, stride=1, padding=0, bias=False),
+#             nn.InstanceNorm2d(256),
+#             nn.ReLU(),
+#             # 256 5 5
+#             nn.ConvTranspose2d(256, 256, kernel_size=4, stride=2, padding=0, groups=256, bias=False),
+#             nn.InstanceNorm2d(256),
+#             nn.ConvTranspose2d(256, 128, kernel_size=1, stride=1, padding=0, bias=False),
+#             nn.InstanceNorm2d(128),
+#             nn.ReLU(),
+#             # 128 12 12
+#             nn.ConvTranspose2d(128, 128, kernel_size=4, stride=2, padding=0, groups=128, bias=False),
+#             nn.InstanceNorm2d(128),
+#             nn.ConvTranspose2d(128, 64, kernel_size=1, stride=1, padding=0, bias=False),
+#             nn.InstanceNorm2d(64),
+#             nn.ReLU(),
+#             # 64 26 26
+#             nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=0, groups=64, bias=False),
+#             nn.InstanceNorm2d(64),
+#             nn.ConvTranspose2d(64, 32, kernel_size=1, stride=1, padding=0, bias=False),
+#             nn.InstanceNorm2d(32),
+#             nn.ReLU(),
+#             # 32 54 54
+#             nn.ConvTranspose2d(32, 32, kernel_size=4, stride=2, padding=0, groups=32, bias=False),
+#             nn.InstanceNorm2d(32),
+#             # nn.ConvTranspose2d(32, 16, kernel_size=3, stride=1, padding=1, bias=False),
+#             nn.ConvTranspose2d(32, 16, kernel_size=1, stride=1, padding=0, bias=False),
+#             nn.InstanceNorm2d(16),
+#             nn.ReLU(),
+#             # 16 110 110
+#             nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=0, groups=16, bias=False),
+#             nn.InstanceNorm2d(16),
+#             # nn.ConvTranspose2d(16, 8, kernel_size=3, stride=1, padding=1, bias=False),
+#             nn.ConvTranspose2d(16, 8, kernel_size=1, stride=1, padding=0, bias=False),
+#             nn.InstanceNorm2d(8),
+#             nn.ReLU(),
+#             # 8 222 222
+#             nn.ConvTranspose2d(8, 8, kernel_size=3, stride=1, padding=0, groups=8, bias=False),
+#             nn.InstanceNorm2d(8),
+#             # nn.ConvTranspose2d(8, image_nc, kernel_size=3, stride=1, padding=1, bias=False),
+#             nn.ConvTranspose2d(8, image_nc, kernel_size=1, stride=1, padding=0, bias=False),
+#             nn.Tanh()
+#             # 3 224 224
+#         ]
+
+#         self.encoder = nn.Sequential(*encoder_lis)
+#         self.Csqueeze = nn.Sequential(*Csqueeze_lis)
+#         self.bottle_neck = nn.Sequential(*bottle_neck_lis)
+#         self.decoder = nn.Sequential(*decoder_lis)
+#         if label_feature:
+#             # if bin_label:
+#             #     self.facenet = Facenet(backbone="mobilenet",num_classes=num_classes,embedding_size=self.embedding_size)
+#             if kmeans_label: # 不需要类别信息
+#                 self.facenet = Facenet(backbone="mobilenet",num_classes=num_classes,embedding_size=self.embedding_size)
+#                 f = open('ul_models/'+datasetname+'_k'+str(num_classes)+'.pickle','rb')
+#                 self.kmeans = pickle.load(f)
+#                 f.close()
+
+#     def forward(self, x, labels):
+#         # labels=(labels+3)%10 # 将一个类的噪声加到另一个类上，看噪声是否有效
+#         if self.label_feature:
+#             if self.kmeans_label:
+#                 with torch.no_grad():
+#                     features = self.facenet.feature_extract(x).detach()
+#                     lab = self.kmeans.predict(features.cpu())
+#                 self.lab = torch.from_numpy(lab).cuda()
+#                 labels = self.lab
+#                 # pred_lab = F.one_hot(self.lab.to(torch.int64), self.num_classes)
+#             if self.bin_label:
+#                 pred_lab = torch.zeros((labels.shape[0]),self.bin_num).cuda()
+#                 for i, label in enumerate(labels):
+#                     bin_lab = bin(label)
+#                     # for j, bit in enumerate(bin_lab[2:]): # 0b10和0b1是同一个pred_lab
+#                     #     pred_lab[i][-j] = int(bit)
+#                     for j, bit in enumerate(bin_lab[::-1]):
+#                         if bit == 'b':
+#                             break
+#                         pred_lab[i][-j-1] = int(bit)
+#             else:
+#                 # labels:[-]->[-,10] 变成onehot向量
+#                 pred_lab = F.one_hot(labels, self.num_classes)
+#             x = self.encoder(x) # x:[-,3,32,32]->[-,32,6,6]或[,3,224,224]->[,32,54,54]
+#             # [-,10]->[-,10,6,6] 在H和W方向上扩展
+#             pred_lab = pred_lab.unsqueeze(2).expand(x.shape[0],pred_lab.shape[1],x.shape[2]).unsqueeze(2).expand(
+#                 x.shape[0],pred_lab.shape[1],x.shape[2],x.shape[3])
+#             x = torch.cat([x,pred_lab],dim=1) # 在C维度上concat，x:[-,32,6,6]->[-,42,6,6]
+#             x = self.Csqueeze(x) # x:[-,42,6,6]->[-,32,6,6]
+#             x = self.bottle_neck(x) # 尺寸不变
+#             x = self.decoder(x)
+#         else:
+#             x = self.encoder(x)
+#             x = self.bottle_neck(x) # 尺寸不变
+#             x = self.decoder(x)
+#         return x
 
 # class Generator(nn.Module):
 #     def __init__(self,gen_input_nc,image_nc,label_feature,num_classes,bin_label=True,kmeans_label=True,datasetname=None):
@@ -295,21 +551,21 @@ class Generator(nn.Module):
 #         self.embedding_size = 128
 #         self.bin_num = 16 # bin编码的位数
 #         ex_channel = self.bin_num if bin_label else num_classes
-#         # encoder_lis = [
-#         #     # MNIST:1*28*28
-#         #     nn.Conv2d(gen_input_nc, 8, kernel_size=3, stride=1, padding=0, bias=True),
-#         #     nn.InstanceNorm2d(8),
-#         #     nn.ReLU(),
-#         #     # 8*26*26
-#         #     nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=0, bias=True),
-#         #     nn.InstanceNorm2d(16),
-#         #     nn.ReLU(),
-#         #     # 16*12*12
-#         #     nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=0, bias=True),
-#         #     nn.InstanceNorm2d(32),
-#         #     nn.ReLU(),
-#         #     # 32*5*5
-#         # ]
+        encoder_lis = [
+            # MNIST:1*28*28
+            nn.Conv2d(gen_input_nc, 8, kernel_size=3, stride=1, padding=0, bias=True),
+            nn.InstanceNorm2d(8),
+            nn.ReLU(),
+            # 8*26*26
+            nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=0, bias=True),
+            nn.InstanceNorm2d(16),
+            nn.ReLU(),
+            # 16*12*12
+            nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=0, bias=True),
+            nn.InstanceNorm2d(32),
+            nn.ReLU(),
+            # 32*5*5
+        ]
 #         # encoder_lis = [
 #         #     # MNIST:1*28*28
 #         #     nn.Conv2d(gen_input_nc, 8, kernel_size=1, stride=1, padding=0, bias=True),
@@ -763,8 +1019,8 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
-        width = int(planes * (base_width / 64.)) * groups #inplanes
-        #groups = inplanes
+        width = int(planes * (base_width / 64.)) * groups # inplanes
+        groups = width
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         # self.conv1 = conv3x3(inplanes, width, 1, 1, 1) #
         self.conv1 = conv1x1(inplanes, width)
@@ -816,7 +1072,7 @@ class InvertedResidual(nn.Module):
         assert stride in [1, 2]
 
         if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
+            norm_layer = nn.BatchNorm2d # BatchNorm2d InstanceNorm2d LayerNorm
 
         hidden_dim = int(round(inp * expand_ratio))
         self.use_res_connect = self.stride == 1 and inp == oup
@@ -824,19 +1080,17 @@ class InvertedResidual(nn.Module):
         layers: List[nn.Module] = []
         if expand_ratio != 1:
             # pw
-            layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer,
+            # layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer,
+            layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=3, padding=1, norm_layer=norm_layer,
                                              activation_layer=nn.ReLU6))
-            # layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=3, padding=1, norm_layer=norm_layer,
-                                            #  activation_layer=nn.ReLU6))
         layers.extend([
             # dw
-            # ConvNormActivation(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer,
-            #                    activation_layer=nn.ReLU6),
-            ConvNormActivation(hidden_dim, hidden_dim, stride=stride, norm_layer=norm_layer,
+            ConvNormActivation(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer,
+            # ConvNormActivation(hidden_dim, hidden_dim, stride=stride, norm_layer=norm_layer,
                                activation_layer=nn.ReLU6),
             # pw-linear
-            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            # nn.Conv2d(hidden_dim, oup, 3, 1, 1, bias=False),
+            # nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            nn.Conv2d(hidden_dim, oup, 3, 1, 1, bias=False),
             norm_layer(oup),
         ])
         self.conv = nn.Sequential(*layers)
@@ -878,11 +1132,11 @@ class MNIST_target_net(nn.Module):
 # Define a resnet block
 # modified from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py
 class ResnetBlock(nn.Module):
-    def __init__(self, dim, padding_type='reflect', norm_layer=nn.BatchNorm2d, use_dropout=False, use_bias=False):
+    def __init__(self, dim, padding_type='reflect', norm_layer=nn.BatchNorm2d, use_dropout=False, use_bias=False, groupsconv=False):
         super(ResnetBlock, self).__init__()
-        self.conv_block = self.build_conv_block(dim, padding_type, norm_layer, use_dropout, use_bias)
+        self.conv_block = self.build_conv_block(dim, padding_type, norm_layer, use_dropout, use_bias, groupsconv)
 
-    def build_conv_block(self, dim, padding_type, norm_layer, use_dropout, use_bias):
+    def build_conv_block(self, dim, padding_type, norm_layer, use_dropout, use_bias, groupsconv):
         conv_block = []
         p = 0 # 先padding再卷积，不改变图片尺寸
         if padding_type == 'reflect':
@@ -893,8 +1147,11 @@ class ResnetBlock(nn.Module):
             p = 1
         else:
             raise NotImplementedError('padding [%s] is not implemented' % padding_type)
-
-        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, groups=dim, bias=use_bias), #
+        if groupsconv:
+            groups = dim
+        else:
+            groups = 1
+        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, groups=groups, bias=use_bias),
                        norm_layer(dim),
                        nn.ReLU(True)]
         if use_dropout:
@@ -910,7 +1167,7 @@ class ResnetBlock(nn.Module):
         else:
             raise NotImplementedError('padding [%s] is not implemented' % padding_type)
 
-        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, groups=dim, bias=use_bias),
+        conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, groups=groups, bias=use_bias),
                        norm_layer(dim)]
 
         return nn.Sequential(*conv_block)

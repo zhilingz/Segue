@@ -29,7 +29,7 @@ for noise_prop in range(100,101):
     torch.cuda.manual_seed(0)
 
     method = sys.argv[1] # UEc UEs RUE GUE random
-    datasetname = 'WebFace10' # sys.argv[2] # WebFace10 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
+    datasetname = 'CIFAR10' # sys.argv[2] # WebFace10 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
     root = '/data/zhangzhiling/'+datasetname
     resize = 32 if 'CIFAR10' in datasetname else 224
     quality =  95 # jgep 压缩质量int(sys.argv[2])
@@ -77,7 +77,7 @@ for noise_prop in range(100,101):
         # output_test = root+'/test'+str(noise_prop)+method+str(resize)+'t10/'# a'+Eps+'/'
     if method == 'UEc' or method == 'UEs' or method == 'TUE':
         # noise_path = 'ul_models/'+datasetname+'_'+method+str(resize)+'.pt'
-        noise_path = './ul_models/'+'WebFace10'+method+'.pt'
+        noise_path = './ul_models/'+datasetname+method+'.pt'
         noise = torch.load(noise_path)
         print(noise_path, 'load!')
         # output_train = root+'/train'+str(noise_prop)+method+str(resize)+'/' # '+str(noise_prop)+' random _png '+str(resize)+'

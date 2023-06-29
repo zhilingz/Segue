@@ -4,7 +4,7 @@ import time
 import torch
 import torchvision
 import torch.nn.functional as F
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(0) # 固定随机种子，方便做对照试验
 torch.cuda.manual_seed(0)
@@ -30,7 +30,7 @@ kmeans_label = False # 使用预训练的人脸提取器提取人脸128维特征
 # dataset setting
 root = '/data/zhangzhiling/'
 method = sys.argv[1] # GUE UEc UEs TUE RUE
-datasetname = "WebFace10"  # sys.argv[2] WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
+datasetname = "CIFAR10"  # sys.argv[2] WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
 modelname =  sys.argv[2] #'resnet18' # resnet18 mobilenet_v2 inception_v3
 img_size = 32 if 'CIFAR10' in datasetname else 224
 batch_size = 128 if method == 'TUE' or 'CIFAR10' in datasetname else 16
@@ -63,6 +63,7 @@ if modelname=='mobilenet_v2':
     #     [1, 320, 1, 1],
     #     [1, 512, 3, 2],
     # ]
+    # (affine=True, track_running_stats=True)
     model = torchvision.models.mobilenet_v2(num_classes=num_classes, block=InvertedResidual).to(device)
     # model = torchvision.models.mobilenet_v2(num_classes=num_classes,inverted_residual_setting=inverted_residual_setting).to(device)
     # model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
@@ -81,8 +82,8 @@ elif modelname=='resnet18':
         model.conv1 = torch.nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False).to(device)
         model.maxpool = torch.nn.MaxPool2d(kernel_size=1, stride=1, padding=0).to(device)
 elif modelname=='resnet50':
-    # model = torchvision.models.resnet._resnet('resnet50', Bottleneck, [3, 4, 6, 3], False, True, num_classes=num_classes).to(device)
-    model = torchvision.models.resnet50(num_classes=num_classes).to(device)
+    model = torchvision.models.resnet._resnet('resnet50', Bottleneck, [3, 4, 6, 3], False, True, num_classes=num_classes).to(device)
+    # model = torchvision.models.resnet50(num_classes=num_classes).to(device)
 elif modelname=='resnet34':
     model = torchvision.models.resnet34(num_classes=num_classes).to(device)
 elif modelname=='resnet152':
@@ -103,7 +104,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=5e-4) #5e-4
 scheduler =  torch.optim.lr_scheduler.CosineAnnealingLR(optimizer = optimizer, T_max =  epochs)
 print('surrogate model:', modelname)
 ul.model_eval(model, 0)
-pretrain_epoch = 3
+pretrain_epoch = 5
 for epoch in range(1, epochs+1):
     ul.loss_init()
     if epoch%5 == 1 or epoch < pretrain_epoch: # 隔几个epoch更新一次目标模型

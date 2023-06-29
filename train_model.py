@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from models import Facenet, Bottleneck, InvertedResidual
@@ -171,7 +171,7 @@ for noise_prop in range(5,6):
     tensorboard = True # 启用tensorboard
     modelname = sys.argv[2] # # resnet18 mobilenet inception_resnetv1 sys.argv[2] 
     method = sys.argv[1] # UEc UEs RUE GUE random
-    datasetname = 'WebFace10' # # WebFace10 WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
+    datasetname = 'CIFAR10' # # WebFace10 WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
     
     resize = 32 if 'CIFAR10' in datasetname else 224
     pretrain_model = False
@@ -256,8 +256,8 @@ for noise_prop in range(5,6):
             model.conv1 = torch.nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False).to(device)
             model.maxpool = torch.nn.MaxPool2d(kernel_size=1, stride=1, padding=0).to(device)
     elif modelname=='resnet50':
-        # model = torchvision.models.resnet._resnet('resnet50', Bottleneck, [3, 4, 6, 3], False, True, num_classes=num_classes).to(device)
-        model = torchvision.models.resnet50(num_classes=num_classes).to(device)
+        model = torchvision.models.resnet._resnet('resnet50', Bottleneck, [3, 4, 6, 3], False, True, num_classes=num_classes).to(device)
+        # model = torchvision.models.resnet50(num_classes=num_classes).to(device)
     elif modelname=='resnet34':
         model = torchvision.models.resnet34(num_classes=num_classes).to(device)
     
