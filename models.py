@@ -335,7 +335,6 @@ class Generator(nn.Module):
         )
         return layers
 
-
     def forward(self, x, labels):
         # labels=(labels+3)%10 # 将一个类的噪声加到另一个类上，看噪声是否有效
         if self.label_feature:
@@ -1080,8 +1079,8 @@ class InvertedResidual(nn.Module):
         layers: List[nn.Module] = []
         if expand_ratio != 1:
             # pw
-            # layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer,
-            layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=3, padding=1, norm_layer=norm_layer,
+            layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer,
+            # layers.append(ConvNormActivation(inp, hidden_dim, kernel_size=3, padding=1, norm_layer=norm_layer,
                                              activation_layer=nn.ReLU6))
         layers.extend([
             # dw
@@ -1089,8 +1088,8 @@ class InvertedResidual(nn.Module):
             # ConvNormActivation(hidden_dim, hidden_dim, stride=stride, norm_layer=norm_layer,
                                activation_layer=nn.ReLU6),
             # pw-linear
-            # nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            nn.Conv2d(hidden_dim, oup, 3, 1, 1, bias=False),
+            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            # nn.Conv2d(hidden_dim, oup, 3, 1, 1, bias=False),
             norm_layer(oup),
         ])
         self.conv = nn.Sequential(*layers)

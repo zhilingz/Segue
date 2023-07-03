@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from models import Facenet, Bottleneck, InvertedResidual
@@ -21,11 +21,21 @@ from util import AddPepperNoise, Cutout, mix_criterion, Mixup_data, Cutmix_data
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
+# if sys.argv[3] == 'log':
+#     # savedStdout = sys.stdout  #保存标准输出流
+#     print_log = open("logs/"+sys.argv[4],"a",buffering=1) # printlog.txt
+#     sys.stdout = print_log
+#     print(sys.argv)
+logpath = '/data/zhangzhiling/Segue/log/'+'_'.join([sys.argv[7],sys.argv[5],sys.argv[2],sys.argv[1],sys.argv[6]])
+if not os.path.exists(logpath):
+    os.mkdir(logpath)
 if sys.argv[3] == 'log':
-    # savedStdout = sys.stdout  #保存标准输出流
-    print_log = open("logs/"+sys.argv[4],"a",buffering=1) # printlog.txt
+    # print_log = open("logs/"+sys.argv[4],"a",buffering=1)
+    # sys.stdout = print_log
+    # print("\n\n", sys.argv)
+    logfilepath = logpath+'/log.txt'
+    print_log = open(logfilepath,"a",buffering=1)
     sys.stdout = print_log
-    print(sys.argv)
 
 def _model_eval(set=['clean','trainset']):
     '''测试代理模型在加噪/干净的训练/测试数据集上的准确率'''
@@ -170,8 +180,8 @@ for noise_prop in range(5,6):
     noise_prop /= 5 # 0到1，训练集中加噪声图片的比例
     tensorboard = True # 启用tensorboard
     modelname = sys.argv[2] # # resnet18 mobilenet inception_resnetv1 sys.argv[2] 
-    method = sys.argv[1] # UEc UEs RUE GUE random
-    datasetname = 'CIFAR10' # # WebFace10 WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
+    method = sys.argv[1] # UEc UE RUE GUE random
+    datasetname = sys.argv[5] # # WebFace10 WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
     
     resize = 32 if 'CIFAR10' in datasetname else 224
     pretrain_model = False
@@ -265,7 +275,7 @@ for noise_prop in range(5,6):
     print(model)
 
     train_itr = len(train_dataloader)
-    optimizer_model = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer_model = torch.optim.Adam(model.parameters(), lr=lr) # todo 不同分类器消融实验
     scheduler =  torch.optim.lr_scheduler.CosineAnnealingLR(optimizer = optimizer_model, T_max = epochs_test)
     print('modelname:', modelname)
     print('num_classes:', num_classes)

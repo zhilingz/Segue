@@ -4,7 +4,9 @@ import time
 import torch
 import torchvision
 import torch.nn.functional as F
-os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+from torch.utils.data import DataLoader
+from tqdm import tqdm  
+os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(0) # 固定随机种子，方便做对照试验
 torch.cuda.manual_seed(0)
@@ -15,31 +17,50 @@ from models import Facenet, weights_init, Bottleneck, InvertedResidual
 
 # start_time = time.time()
 
+if sys.argv[7]==" ":
+    time_log = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
+else:
+    time_log = sys.argv[7]
+log_dataset = torchvision.datasets.ImageFolder('/data/zhangzhiling/WebFace10/image_log',torchvision.transforms.ToTensor())
+log_dataloader = DataLoader(log_dataset,batch_size=20,shuffle=False,num_workers=4,drop_last=False)
+datalog_iter = iter(log_dataloader)
+(image_log, label_log) = next(datalog_iter)
+image_log, label_log = image_log.to(device), label_log.to(device)
+logpath = '/data/zhangzhiling/Segue/log/'+'_'.join([time_log,sys.argv[5],sys.argv[2],sys.argv[1],sys.argv[6]])
+if not os.path.exists(logpath):
+    os.mkdir(logpath)
 if sys.argv[3] == 'log':
-    print_log = open("logs/"+sys.argv[4],"a",buffering=1)
-    sys.stdout = print_log
-    print("\n\n", sys.argv)
+    # print_log = open("logs/"+sys.argv[4],"a",buffering=1)
+    # sys.stdout = print_log
+    # print("\n\n", sys.argv)
+    logfilepath = logpath+'/log.txt'
+    print_log = open(logfilepath,"a",buffering=1)
+    # sys.stdout = print_log
+    # self.file.write(data)
+    #     self.stdout.write(data)
 # train setting
-epochs = 40
+epochs = 80
 save_epoch = 10 # 多少epoch保存一次
 Epsilon = 8/255 #8/255
 noise_prop = 1 # 0到1，毒化率``
 label_feature = True # 将类别信息加到图片特征中
 bin_label = True # 使用预训练的人脸提取器和arcface得到预测标签，代替真实标签嵌入图片特征中
 kmeans_label = False # 使用预训练的人脸提取器提取人脸128维特征，用kmeans聚类预测标签代替真实标签
+strategy = sys.argv[6] # new old
 # dataset setting
 root = '/data/zhangzhiling/'
-method = sys.argv[1] # GUE UEc UEs TUE RUE
-datasetname = "CIFAR10"  # sys.argv[2] WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
+method = sys.argv[1] # GUE UEc UE TUE RUE
+datasetname = sys.argv[5]  # sys.argv[2] WebFace10 WebFace50 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
 modelname =  sys.argv[2] #'resnet18' # resnet18 mobilenet_v2 inception_v3
 img_size = 32 if 'CIFAR10' in datasetname else 224
-batch_size = 128 if method == 'TUE' or 'CIFAR10' in datasetname else 16
+batch_size = 512 if method == 'TUE' or 'CIFAR10' in datasetname else 16
 print('batch_size',batch_size)
-train_dataloader, test_dataloader = getdataloader(root, datasetname, img_size, batch_size)
+print('batch_size',batch_size,file=print_log)
+train_dataloader, test_dataloader = getdataloader(root, datasetname, img_size, batch_size, print_log)
 # unlearnable method
 num_classes = len(train_dataloader.dataset.classes)
-ul = ul_method(method, train_dataloader, test_dataloader, datasetname, num_classes, img_size, 
-               Epsilon, label_feature, bin_label, kmeans_label,0, device) #
+ul = ul_method(logpath, method, train_dataloader, test_dataloader, datasetname, modelname, num_classes, img_size, 
+               Epsilon, label_feature, bin_label, kmeans_label,4, device) #
 # agent model setting
 if modelname=='mobilenet_v2':
     # inverted_residual_setting = [
@@ -64,9 +85,9 @@ if modelname=='mobilenet_v2':
     #     [1, 512, 3, 2],
     # ]
     # (affine=True, track_running_stats=True)
-    model = torchvision.models.mobilenet_v2(num_classes=num_classes, block=InvertedResidual).to(device)
+    # model = torchvision.models.mobilenet_v2(num_classes=num_classes, block=InvertedResidual).to(device)
     # model = torchvision.models.mobilenet_v2(num_classes=num_classes,inverted_residual_setting=inverted_residual_setting).to(device)
-    # model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
+    model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
     # model = Facenet(backbone=modelname, num_classes=num_classes).to(device)  
     # loss_fun = lambda logits, labels : torch.nn.NLLLoss()(F.log_softmax(logits, dim = -1), labels)  
     # if pretrain_model:
@@ -97,6 +118,7 @@ elif modelname=='efficientnet_b0':
     model = torchvision.models.efficientnet_b0(num_classes=num_classes).to(device)
     
 print(model)
+print(model, file=print_log)
 loss_fun = lambda logits, labels : F.cross_entropy(logits, labels)
 # model.apply(weights_init)
 
@@ -104,14 +126,56 @@ optimizer = torch.optim.Adam(model.parameters(), lr=5e-4) #5e-4
 scheduler =  torch.optim.lr_scheduler.CosineAnnealingLR(optimizer = optimizer, T_max =  epochs)
 print('surrogate model:', modelname)
 ul.model_eval(model, 0)
-pretrain_epoch = 5
+pretrain_epoch = 1
+train_step = 10
+data_iter = iter(train_dataloader)
 for epoch in range(1, epochs+1):
     ul.loss_init()
-    if epoch%5 == 1 or epoch < pretrain_epoch: # 隔几个epoch更新一次目标模型
+    if strategy == 'old':
+        if epoch%5 == 1 or epoch <= pretrain_epoch: # 隔几个epoch更新一次目标模型
+            model.train()
+            ul.idx = 0
+            for step, data in enumerate(train_dataloader):
+                image, label = data
+                image, label = image.to(device), label.to(device)
+                adv_image = ul.add_noise(image, label)
+                if method == 'TUE':
+                    loss_tue = ul.SimSiam_net(adv_image)
+                    ul.optimizer.zero_grad()
+                    loss_tue.backward()
+                    ul.optimizer.step()
+                logits = model(adv_image)
+                loss_model = F.cross_entropy(logits, label)
+                optimizer.zero_grad()
+                loss_model.backward()
+                optimizer.step()
+                scheduler.step()
+                # if step*batch_size>10000 and datasetname == 'CIFAR10':
+                #     break
+            ul.model_eval(model, epoch)
+            time_now = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
+            print(time_now, "epoch %d: lr_model:%.3e"%(epoch, optimizer.param_groups[0]['lr']))
+        
+        if epoch >= pretrain_epoch:
+            ul.idx = 0
+            for _, data in enumerate(train_dataloader):
+                image, label = data
+                ul.train_noise(model, image.to(device), label.to(device))
+            ul.print_loss(epoch) # print statistics
+            if torch.abs(ul.loss_ul_sum/ul.num_itr) < 0.001:
+                ul.model_eval(model, epoch)
+                ul.save_noise()
+                break
+    
+    if strategy == 'new':
         model.train()
-        ul.idx = 0
-        for iter, data in enumerate(train_dataloader):
-            image, label = data
+        for step in range(0, train_step):
+            try:
+                (image, label) = next(data_iter)
+            except:
+                ul.idx = 0
+                data_iter = iter(train_dataloader)
+                (image, label) = next(data_iter)
             image, label = image.to(device), label.to(device)
             adv_image = ul.add_noise(image, label)
             if method == 'TUE':
@@ -125,13 +189,12 @@ for epoch in range(1, epochs+1):
             loss_model.backward()
             optimizer.step()
             scheduler.step()
-            if iter*batch_size>10000 and datasetname == 'CIFAR10':
+            if step*batch_size>10000 and datasetname == 'CIFAR10':
                 break
         ul.model_eval(model, epoch)
         time_now = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
         print(time_now, "epoch %d: lr_model:%.3e"%(epoch, optimizer.param_groups[0]['lr']))
     
-    if epoch >= pretrain_epoch:
         ul.idx = 0
         for _, data in enumerate(train_dataloader):
             image, label = data
@@ -141,10 +204,10 @@ for epoch in range(1, epochs+1):
             ul.model_eval(model, epoch)
             ul.save_noise()
             break
-    
+    ul.write_log(epoch, image_log, label_log)
     if epoch%save_epoch == 0: # 保存
         ul.save_noise()
-
+ 
 # end_time= time.time()
 
 # print('time cost : %.5f sec' %(start_time-end_time))

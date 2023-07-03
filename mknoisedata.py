@@ -11,11 +11,21 @@ from PIL import Image
 from tqdm import tqdm
 from dataset import CustomSampler
 
+# if sys.argv[3] == 'log':
+#     print_log = open("logs/"+sys.argv[4],"a",buffering=1)
+#     sys.stdout = print_log
+#     print(sys.argv)
+logpath = '/data/zhangzhiling/Segue/log/'+'_'.join([sys.argv[7],sys.argv[5],sys.argv[2],sys.argv[1],sys.argv[6]])
+if not os.path.exists(logpath):
+    os.mkdir(logpath)
 if sys.argv[3] == 'log':
-    print_log = open("logs/"+sys.argv[4],"a",buffering=1)
+    # print_log = open("logs/"+sys.argv[4],"a",buffering=1)
+    # sys.stdout = print_log
+    # print("\n\n", sys.argv)
+    logfilepath = logpath+'/log.txt'
+    print_log = open(logfilepath,"a",buffering=1)
     sys.stdout = print_log
-    print(sys.argv)
-
+    
 for noise_prop in range(100,101):
     Epsilon = 8 * 1 / 255
     num_workers = 4
@@ -28,8 +38,8 @@ for noise_prop in range(100,101):
     torch.manual_seed(0) # 固定随机种子，方便做对照试验
     torch.cuda.manual_seed(0)
 
-    method = sys.argv[1] # UEc UEs RUE GUE random
-    datasetname = 'CIFAR10' # sys.argv[2] # WebFace10 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
+    method = sys.argv[1] # UEc UE RUE GUE random
+    datasetname = sys.argv[5] # sys.argv[2] # WebFace10 WebFace10_ ImageNet10 CIFAR10 CIFAR10_0.2 CelebA10 VGGFace10
     root = '/data/zhangzhiling/'+datasetname
     resize = 32 if 'CIFAR10' in datasetname else 224
     quality =  95 # jgep 压缩质量int(sys.argv[2])
@@ -58,6 +68,7 @@ for noise_prop in range(100,101):
         Eps = '4' # 对抗训练的强度
         # generator_path = 'ul_models/'+datasetname+'_GUE'+str(resize)+'a'+Eps+'.pth'
         generator_path ='ul_models/'+datasetname+method+'.pth' #'WebFace10'
+        # generator_path = '/data/zhangzhiling/Segue/log/2023-07-01 23:22:56_WebFace10_mobilenet_v2_GUE_new/checkpoints/64.pth'
         netG = Generator(3,3,True,num_classes,bin_label=True,kmeans_label=False,datasetname=datasetname).to(device)
         model_dict = netG.state_dict()
         pretrained_dict = torch.load(generator_path)
@@ -75,7 +86,7 @@ for noise_prop in range(100,101):
         netG.eval()
         # output_train = root+'/train'+str(noise_prop)+method+str(resize)+'t10/'# 'a'+Eps+'/' # '+str(noise_prop)+' random _png '+str(resize)+'
         # output_test = root+'/test'+str(noise_prop)+method+str(resize)+'t10/'# a'+Eps+'/'
-    if method == 'UEc' or method == 'UEs' or method == 'TUE':
+    if method == 'UEc' or method == 'UE' or method == 'TUE':
         # noise_path = 'ul_models/'+datasetname+'_'+method+str(resize)+'.pt'
         noise_path = './ul_models/'+datasetname+method+'.pt'
         noise = torch.load(noise_path)
@@ -115,7 +126,7 @@ for noise_prop in range(100,101):
                 class_noise = noise[label]
                 batch_noise.append(class_noise)
             perturbation = torch.stack(batch_noise).to(device)
-        if method == 'UEs' or method == 'RUE' or method == 'TUE' or method == 'random':
+        if method == 'UE' or method == 'RUE' or method == 'TUE' or method == 'random':
             if noise.shape[0] == num_samples:
                 perturbation = noise[idx:idx+len(labels)]
                 idx += len(labels)
@@ -164,7 +175,7 @@ for noise_prop in range(100,101):
                 class_noise = noise[label]
                 batch_noise.append(class_noise)
             perturbation = torch.stack(batch_noise).to(device)
-        if method == 'UEs'or method == 'RUE' or method == 'TUE' or method == 'random':
+        if method == 'UE'or method == 'RUE' or method == 'TUE' or method == 'random':
             perturbation = noise[idx:idx+len(labels)]
             idx += len(labels)
         perturbation = torch.clamp(perturbation, -Epsilon, Epsilon)

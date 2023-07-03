@@ -1,3 +1,5 @@
+import os
+import sys
 import time
 import collections
 import numpy as np
@@ -14,11 +16,13 @@ from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
 class ul_method():
-    def __init__(self,method,train_dataloader,test_dataloader,datasetname,num_classes,size,Epsilon,label_feature,bin_label,kmeans_label,rho,device):
+    def __init__(self,logpath,method,train_dataloader,test_dataloader,datasetname,modelname,num_classes,size,Epsilon,label_feature,bin_label,kmeans_label,rho,device):
+        self.logpath = logpath
         self.method = method
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
         self.datasetname = datasetname
+        self.modelname = modelname
         self.num_classes = num_classes
         self.Epsilon = Epsilon
         self.size = size
@@ -30,7 +34,7 @@ class ul_method():
             self.atk_step_size = self.atk_Epsilon/5 # 对抗训练更新大小
             self.atk_step = 5 
             self.netG = Generator(3,3,label_feature,num_classes,bin_label,kmeans_label,datasetname).to(device)
-            self.netG = UNet(n_channels=3, n_classes=num_classes, kmeans_label=kmeans_label).to(device) #, bilinear=args.bilinear)
+            # self.netG = UNet(n_channels=3, n_classes=num_classes, kmeans_label=kmeans_label).to(device) #, bilinear=args.bilinear)
             # sum_p = 0
             # for p in self.netG.parameters():
             #     sum_p +=p.numel()
@@ -53,11 +57,11 @@ class ul_method():
         elif method=='UEc': # 随机初始化10个类的噪声，perturbation的尺寸为[cls,3,size,size]
             self.lr_noise = Epsilon/10
             self.noise = torch.FloatTensor(*[num_classes,3,size,size]).uniform_(-Epsilon,Epsilon).to(device)
-        elif method=='UEs': # sample-wise
+        elif method=='UE': # sample-wise
             self.lr_noise = Epsilon/10
             self.num_samples = len(train_dataloader.dataset)
             self.noise = torch.FloatTensor(*[self.num_samples,3,size,size]).uniform_(-Epsilon,Epsilon).to(device)
-            # self.noise = torch.load('./ul_models/CIFAR10_0.2UEs.pt')
+            # self.noise = torch.load('./ul_models/CIFAR10_0.2UE.pt')
         elif method=='TUE': # sample-wise
             from models import SimSiamModel
             self.SimSiam_net = SimSiamModel().to(device)
@@ -125,7 +129,7 @@ class ul_method():
                 class_noise = self.noise[i]
                 batch_noise.append(class_noise)
             perturbation = torch.stack(batch_noise).to(self.device)
-        if self.method=='UEs' or self.method=='TUE' or self.method == 'RUE':
+        if self.method=='UE' or self.method=='TUE' or self.method == 'RUE':
             perturbation = self.noise[self.idx:self.idx+len(label)]
             self.idx += len(label)
         perturbation = torch.clamp(perturbation, -self.Epsilon, self.Epsilon)
@@ -165,7 +169,7 @@ class ul_method():
         acc = num_correct/num_samples
         acc_sum = num_correct_sum/torch.sum(num_samples) 
         time_now = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
-        print(time_now,'model acc {} {} {} {:.2%}'.format(set[0],set[1],[round(i,2) for i in acc.tolist()],acc_sum))
+        print(time_now,'model acc {} {} {} {:.2%}'.format(set[0],set[1],[round(i,2) for i in acc.tolist()],acc_sum), )
         return acc_sum
     
     def loss_init(self): # 防止除零错误
@@ -178,8 +182,8 @@ class ul_method():
             self.train_GUE(model, image, label)
         if self.method == 'UEc':
             self.train_UEc(model, image, label)
-        if self.method == 'UEs':
-            self.train_UEs(model, image, label)
+        if self.method == 'UE':
+            self.train_UE(model, image, label)
         if self.method == 'TUE':
             for _ in range(5):
                 self.train_TUE(model, image, label)
@@ -209,17 +213,23 @@ class ul_method():
         self.optimizer_G.zero_grad()
         # 计算ul loss，目标模型的识别loss
 
-        logits = model(self.trans(adv_images)) # [batch_size, 10]
+        logits_dirty = model(self.trans(adv_images)) # [batch_size, 10]
+        # logits_clean = model(self.trans(image)) 
         if self.netG.kmeans_label: # 使用k-means预测的label
             label = self.netG.lab.long()
-        loss_ul = F.cross_entropy(logits, label)
+        loss_dirty = F.cross_entropy(logits_dirty, label)
+        # loss_clean = F.cross_entropy(logits_clean, label)
+        loss_ul = loss_dirty# -0.01*loss_clean
         # 求噪声的平均大小，优化目标，噪声尽可能小
         # view(-1) -1表示一个不确定的数，不确定的地方可以写成-1；
         # perturbation.shape[0] 表示噪声的个数；dim=1 表示去掉dim=1的维度，在剩下的维度上求范数
         loss_perturb = torch.mean(torch.norm(perturbation.view(perturbation.shape[0], -1), 2, dim=1))  # type: ignore
 
         # 总噪声loss 
-        loss_G = loss_ul + 0.001 * loss_perturb  
+        # if epoch<10 or loss_ul>0.5:
+        loss_G = 100*loss_ul
+        # else:
+        #     loss_G = loss_ul + 0.001 * loss_perturb  
         loss_G.backward() #retain_graph=True)
         self.optimizer_G.step()
 
@@ -259,7 +269,7 @@ class ul_method():
         self.loss_ul_sum += loss_ul
         self.num_itr += 1
     
-    def train_UEs(self, model, image, label):
+    def train_UE(self, model, image, label):
         '''更新UE噪声'''
         # x.data 返回和x相同tensor, 但不会加入到x的计算历史，不能被autograd追踪求微分
         # https://zhuanlan.zhihu.com/p/351687500 计算图(grad_fn)
@@ -380,7 +390,7 @@ class ul_method():
             file_name = './ul_models/'+self.datasetname+'GUE.pth'
             # file_name = './ul_models/'+self.datasetname+'_GUE'+str(self.size)+'a'+Eps+'.pth' # _e'+str(int(self.Epsilon*255))+'
             torch.save(self.netG.state_dict(), file_name)
-        if self.method == 'UEc' or self.method == 'UEs' or self.method == 'TUE':
+        if self.method == 'UEc' or self.method == 'UE' or self.method == 'TUE':
             # file_name = './ul_models/'+self.datasetname+'_'+self.method+str(self.size)+'.pt'
             file_name = './ul_models/'+self.datasetname+self.method+'.pt'
             torch.save(self.noise, file_name)
@@ -390,3 +400,19 @@ class ul_method():
             file_name = './ul_models/'+self.datasetname+'RUE.pt'
             torch.save(self.noise, file_name)
         print(file_name,'saved!')
+
+    def write_log(self, epoch, image_log, label_log):
+        with torch.no_grad():
+            rjust = lambda x:str(x).rjust(2,'0')
+            checkpointspath = self.logpath+'/checkpoints/'
+            if not os.path.exists(checkpointspath):
+                os.mkdir(checkpointspath)
+            imagespath = self.logpath+'/images/'
+            if not os.path.exists(imagespath):
+                os.mkdir(imagespath)
+            if self.method == 'GUE':
+                torch.save(self.netG.state_dict(), checkpointspath+rjust(epoch)+'.pth')
+                if not os.path.exists(imagespath+'raw.png'):
+                    torchvision.utils.save_image(image_log, imagespath+'raw.png',nrow=2)
+                torchvision.utils.save_image(torch.clamp(self.netG(image_log,label_log), -self.Epsilon, self.Epsilon)*50, imagespath+rjust(epoch)+'.png',nrow=2)
+            

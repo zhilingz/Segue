@@ -10,8 +10,8 @@ def conv_bn(inp, oup, stride = 1):
 def conv_dw(inp, oup, stride = 1):
     return nn.Sequential(
         nn.ZeroPad2d([0,1,0,1]) if stride == 2 else nn.ZeroPad2d([1,1,1,1]),
-        nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
-        # nn.Conv2d(inp, inp, 3, stride, 1, groups=1, bias=False),
+        # nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
+        nn.Conv2d(inp, inp, 3, stride, 1, groups=1, bias=False),
         nn.BatchNorm2d(inp),
         nn.ReLU6(),
 
