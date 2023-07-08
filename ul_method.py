@@ -169,7 +169,7 @@ class ul_method():
         acc = num_correct/num_samples
         acc_sum = num_correct_sum/torch.sum(num_samples) 
         time_now = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
-        print(time_now,'model acc {} {} {} {:.2%}'.format(set[0],set[1],[round(i,2) for i in acc.tolist()],acc_sum), )
+        print(time_now,'model acc {} {} {} {:.2%}'.format(set[0],set[1],[round(i,2) for i in acc.tolist()],acc_sum))
         return acc_sum
     
     def loss_init(self): # 防止除零错误

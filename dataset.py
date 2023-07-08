@@ -2,7 +2,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torch.utils.data import Sampler   
+from torch.utils.data import Sampler
 
 class CustomSampler(Sampler):
     '''
@@ -32,7 +32,7 @@ class CustomSampler(Sampler):
     def __len__(self):
         return len(self.num_samples)
 
-def getdataloader(root, datasetname, size, batch_size, print_log):
+def getdataloader(root, datasetname, size, batch_size):
     train_transforms = transforms.Compose([
         # transforms.RandomCrop(250, padding=40),
         # transforms.RandomHorizontalFlip(),
@@ -62,6 +62,4 @@ def getdataloader(root, datasetname, size, batch_size, print_log):
 
     print('train_dataset:\n',train_dataset.root,'\n',train_dataset.transform)
     print('test_dataset:\n',test_dataset.root,'\n',test_dataset.transform)
-    print('train_dataset:\n',train_dataset.root,'\n',train_dataset.transform, file=print_log)
-    print('test_dataset:\n',test_dataset.root,'\n',test_dataset.transform, file=print_log)
     return train_dataloader, test_dataloader

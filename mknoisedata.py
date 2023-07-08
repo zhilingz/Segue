@@ -25,7 +25,7 @@ if sys.argv[3] == 'log':
     logfilepath = logpath+'/log.txt'
     print_log = open(logfilepath,"a",buffering=1)
     sys.stdout = print_log
-    
+
 for noise_prop in range(100,101):
     Epsilon = 8 * 1 / 255
     num_workers = 4

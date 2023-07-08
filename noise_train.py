@@ -6,7 +6,7 @@ import torchvision
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm  
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(0) # 固定随机种子，方便做对照试验
 torch.cuda.manual_seed(0)
@@ -17,31 +17,31 @@ from models import Facenet, weights_init, Bottleneck, InvertedResidual
 
 # start_time = time.time()
 
-if sys.argv[7]==" ":
-    time_log = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
-else:
-    time_log = sys.argv[7]
-log_dataset = torchvision.datasets.ImageFolder('/data/zhangzhiling/WebFace10/image_log',torchvision.transforms.ToTensor())
-log_dataloader = DataLoader(log_dataset,batch_size=20,shuffle=False,num_workers=4,drop_last=False)
-datalog_iter = iter(log_dataloader)
-(image_log, label_log) = next(datalog_iter)
-image_log, label_log = image_log.to(device), label_log.to(device)
-logpath = '/data/zhangzhiling/Segue/log/'+'_'.join([time_log,sys.argv[5],sys.argv[2],sys.argv[1],sys.argv[6]])
-if not os.path.exists(logpath):
-    os.mkdir(logpath)
 if sys.argv[3] == 'log':
+    if sys.argv[7]==" ":
+        time_log = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
+    else:
+        time_log = sys.argv[7]
+    log_dataset = torchvision.datasets.ImageFolder('/data/zhangzhiling/WebFace10/image_log',torchvision.transforms.ToTensor())
+    log_dataloader = DataLoader(log_dataset,batch_size=20,shuffle=False,num_workers=4,drop_last=False)
+    datalog_iter = iter(log_dataloader)
+    (image_log, label_log) = next(datalog_iter)
+    image_log, label_log = image_log.to(device), label_log.to(device)
+    logpath = '/data/zhangzhiling/Segue/log/'+'_'.join([time_log,sys.argv[5],sys.argv[2],sys.argv[1],sys.argv[6]])
+    if not os.path.exists(logpath):
+        os.mkdir(logpath)
     # print_log = open("logs/"+sys.argv[4],"a",buffering=1)
     # sys.stdout = print_log
     # print("\n\n", sys.argv)
     logfilepath = logpath+'/log.txt'
     print_log = open(logfilepath,"a",buffering=1)
-    # sys.stdout = print_log
+    sys.stdout = print_log
     # self.file.write(data)
     #     self.stdout.write(data)
 # train setting
 epochs = 80
 save_epoch = 10 # 多少epoch保存一次
-Epsilon = 8/255 #8/255
+Epsilon = 8/255 # 8/255
 noise_prop = 1 # 0到1，毒化率``
 label_feature = True # 将类别信息加到图片特征中
 bin_label = True # 使用预训练的人脸提取器和arcface得到预测标签，代替真实标签嵌入图片特征中
@@ -55,8 +55,7 @@ modelname =  sys.argv[2] #'resnet18' # resnet18 mobilenet_v2 inception_v3
 img_size = 32 if 'CIFAR10' in datasetname else 224
 batch_size = 512 if method == 'TUE' or 'CIFAR10' in datasetname else 16
 print('batch_size',batch_size)
-print('batch_size',batch_size,file=print_log)
-train_dataloader, test_dataloader = getdataloader(root, datasetname, img_size, batch_size, print_log)
+train_dataloader, test_dataloader = getdataloader(root, datasetname, img_size, batch_size)
 # unlearnable method
 num_classes = len(train_dataloader.dataset.classes)
 ul = ul_method(logpath, method, train_dataloader, test_dataloader, datasetname, modelname, num_classes, img_size, 
@@ -85,9 +84,9 @@ if modelname=='mobilenet_v2':
     #     [1, 512, 3, 2],
     # ]
     # (affine=True, track_running_stats=True)
-    # model = torchvision.models.mobilenet_v2(num_classes=num_classes, block=InvertedResidual).to(device)
+    model = torchvision.models.mobilenet_v2(num_classes=num_classes, block=InvertedResidual).to(device)
     # model = torchvision.models.mobilenet_v2(num_classes=num_classes,inverted_residual_setting=inverted_residual_setting).to(device)
-    model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
+    # model = torchvision.models.mobilenet_v2(num_classes=num_classes).to(device)
     # model = Facenet(backbone=modelname, num_classes=num_classes).to(device)  
     # loss_fun = lambda logits, labels : torch.nn.NLLLoss()(F.log_softmax(logits, dim = -1), labels)  
     # if pretrain_model:
@@ -118,7 +117,6 @@ elif modelname=='efficientnet_b0':
     model = torchvision.models.efficientnet_b0(num_classes=num_classes).to(device)
     
 print(model)
-print(model, file=print_log)
 loss_fun = lambda logits, labels : F.cross_entropy(logits, labels)
 # model.apply(weights_init)
 
