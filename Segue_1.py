@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-torch.manual_seed(0) # 固定随机种子，方便做对照试验
+torch.manual_seed(0) 
 torch.cuda.manual_seed(0)
 
 from dataset import getdataloader
@@ -20,8 +20,8 @@ from method import Method
 
 # train setting
 epochs = 30
-save_epoch = 10 # 多少epoch保存一次
-Epsilon = 8/255 # 8/255
+save_epoch = 10 
+Epsilon = 8/255 
 # False: Supervised Scenario   True: Unupervised Scenario.
 kmeans_label = True if sys.argv[1]=='True' else False 
 # dataset setting
@@ -58,7 +58,7 @@ for epoch in range(1, epochs+1):
         for step, data in enumerate(train_dataloader):
             image, label = data
             image, label = image.to(device), label.to(device)
-            if method.kmeans_label: # 使用k-means预测的label
+            if method.kmeans_label: # Labels predicted by k-means
                 with torch.no_grad():
                     features = method.netG.facenet.feature_extract(image).detach()
                     lab = method.netG.kmeans.predict(features.cpu())
@@ -78,7 +78,7 @@ for epoch in range(1, epochs+1):
     for _, data in enumerate(train_dataloader):
         image, label = data
         image, label = image.to(device), label.to(device)
-        if method.kmeans_label: # 使用k-means预测的label
+        if method.kmeans_label: # Labels predicted by k-means
             with torch.no_grad():
                 features = method.netG.facenet.feature_extract(image).detach()
                 lab = method.netG.kmeans.predict(features.cpu())
@@ -91,5 +91,5 @@ for epoch in range(1, epochs+1):
         method.model_eval(surrogate_model, epoch)
         method.save_G()
         break
-    if epoch%save_epoch == 0: # 保存
+    if epoch%save_epoch == 0:
         method.save_G()
