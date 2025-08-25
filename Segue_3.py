@@ -13,14 +13,13 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
 def _model_eval(set=['clean','trainset']):
-    '''测试代理模型在加噪/干净的训练/测试数据集上的准确率'''
+    '''Evaluating the proxy model's accuracy on the perturbed and clean training and testing sets.'''
     if set[0]=='dirty' and set[1]=='trainset':
         dataloader = train_dataloader_noise
     elif set[0]=='dirty' and set[1]=='testset ':
@@ -33,7 +32,7 @@ def _model_eval(set=['clean','trainset']):
     num_correct = torch.zeros(num_classes).to(device)
     num_samples = torch.zeros(num_classes).to(device)
     num_correct_sum = 0
-    model.eval() # 停用dropout并在batchnorm层使用训练集的数据分布
+    model.eval()
     for _, data in enumerate(dataloader, 0):
         image, label = data
         image, label = image.to(device), label.to(device)
@@ -63,44 +62,20 @@ def model_eval(epoch):
             _model_eval(['dirty','testset '])
             _model_eval(['clean','trainset'])
             _model_eval(['clean','testset '])
-    
-# def model_load(model,modelname):
-#     model_path = 'pre_models/facenet_'+modelname+'.pth'
-#     model_dict = model.state_dict()
-#     pretrained_dict = torch.load(model_path, map_location = device)
-#     load_key, no_load_key, temp_dict = [], [], {}
-#     for k, v in pretrained_dict.items():
-#         if k in model_dict.keys() and np.shape(model_dict[k]) == np.shape(v):
-#             temp_dict[k] = v
-#             load_key.append(k)
-#         else:
-#             no_load_key.append(k)
-#     model_dict.update(temp_dict)
-#     model.load_state_dict(model_dict)
-#     print("\nFail To Load Key:", str(no_load_key)[:500], "……\nFail To Load Key num:", len(no_load_key))
-#     return model
 
-lr = 5e-4 # 5e-4
+lr = 5e-4 
 epochs_test = 40
 batch_size = 16
 num_workers = 4
-tensorboard = False # 启用tensorboard
+tensorboard = False # use tensorboard
 modelname = 'resnet18'
 datasetname = 'WebFace10' 
 resize = 224
 
-# adv_train = False
-# atk_Epsilon = 4/255 
-# atk_step_size = atk_Epsilon/5
-# atk_step = 5
-torch.manual_seed(0) # 固定随机种子，方便做对照试验
+torch.manual_seed(0) 
 torch.cuda.manual_seed(0)
 
 print(time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
-# print("CUDA Available:",torch.cuda.is_available())
-# print('adv_train: {}\natk_step: {}\natk_step_size: {}/255\natk_Epsilon: {}/255\n\nbatch_size: {}'.format(
-#     adv_train,atk_step,atk_step_size*255,atk_Epsilon*255,batch_size))
-
 
 # 1. load clean dataset and unlearnable dataset
 train_transforms = transforms.Compose([
