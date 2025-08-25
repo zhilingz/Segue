@@ -17,13 +17,15 @@ Epsilon = 8 / 255
 num_workers = 4
 bs1 = 10
 bs2 = 10
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-torch.manual_seed(0) # 固定随机种子，方便做对照试验
+torch.manual_seed(0)
 torch.cuda.manual_seed(0)
+
 datasetname = 'WebFace10' 
 root = './'+datasetname
 resize = 32 if 'CIFAR10' in datasetname else 224
+
 # False: Supervised Scenario   True: Unupervised Scenario.
 kmeans_label = True if sys.argv[1]=='True' else False 
 print("kmeans_label",kmeans_label)
@@ -37,11 +39,14 @@ train_dataset = torchvision.datasets.ImageFolder(root+'/train_clean',transform)
 train_dataloader = DataLoader(train_dataset,batch_size=bs1,shuffle=False,num_workers=num_workers,drop_last=False)
 test_dataset =torchvision.datasets.ImageFolder(root+'/test_clean',transform)
 test_dataloader = DataLoader(test_dataset,batch_size=bs2,shuffle=False,num_workers=num_workers,drop_last=False)
-num_classes = len(train_dataset.classes) # 类别数
+num_classes = len(train_dataset.classes)
 num_samples = len(train_dataset)
 per_samples = num_samples/num_classes
 id_arr = [0 for _ in range(num_classes)]
-rjust = lambda x:str(x).rjust(len(str(num_classes-1)),'0') # input:int, output:str, 如果不补全则会出现label和文件名对不上的情况
+
+# Without this completion, it will cause a mismatch between the labels and the filenames.
+# input:int, output:str
+rjust = lambda x:str(x).rjust(len(str(num_classes-1)),'0')
 
 # 1. load generator
 generator_path ='ul_models/'+datasetname+'_G.pth' #'WebFace10'
