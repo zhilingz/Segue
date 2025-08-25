@@ -10,8 +10,7 @@ Contact: [zhilingzhang@mail.ustc.edu.en](mailto:zhilingzhang@mail.ustc.edu.en)
 Abstract: 
 *The widespread adoption of face recognition has raised privacy concerns regarding the collection and use of facial data. To address this, researchers have explored "unlearnable examples" by adding imperceptible perturbations during model training to prevent the model from learning target features. However, current methods are inefficient and cannot guarantee transferability and robustness at the same time, causing impracticality in the real world. To remedy it, we introduce Side-information Guided Generative Unlearnable Examples (Segue). Using a once-trained multiple-used model to generate perturbations, Segue avoids the time-consuming gradient-based approach. To improve transferability, we introduce side information such as true or pseudo labels, which are inherently consistent across different scenarios. For robustness enhancement, a distortion layer is integrated into the training pipeline. Experiments show Segue is 1000× faster than previous methods, transferable across datasets and models, and resistant to JPEG compression, adversarial training, and standard augmentations.*
 
-<img width="1399" height="583" alt="image" src="https://github.com/user-attachments/assets/0a28893e-56cc-4b32-9aec-d898bf1f8b24" />
-
+![pipeline](./assets/pipeline.png)
 ## Experiments of Supervised Scenario.
 kmeans_label=False
 #### First:
