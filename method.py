@@ -32,7 +32,6 @@ class Method():
         self.trans = transforms.Compose([
                 transforms.GaussianBlur(kernel_size=(3,3), sigma=0.2),
                 transforms.RandomAdjustSharpness(2,1),
-                # # transforms.RandomCrop(224, padding=2),
                 transforms.RandomHorizontalFlip(0.1),
                 transforms.RandomVerticalFlip(0.1)
                 ])
@@ -79,7 +78,7 @@ class Method():
             self._model_eval(['clean','testset '])
             
     def _model_eval(self,set=['clean','trainset']):
-        '''Evaluate proxy model accuracy on noisy/clean train/test datasets'''
+        '''Evaluating the proxy model's accuracy on the perturbed and clean training and testing sets.'''
         dataloader = self.train_dataloader if set[1]=='trainset' else self.test_dataloader
         num_correct = torch.zeros(self.num_classes).to(self.device)
         num_samples = torch.zeros(self.num_classes).to(self.device)
@@ -125,7 +124,6 @@ class Method():
             with torch.no_grad(): # Loss maximization for adversarial training
                 adv_per.add_(torch.sign(grad_adv), alpha=self.atk_step_size)
                 adv_per.clamp_(-self.atk_Epsilon, self.atk_Epsilon)
-        # adv_per.grad.zero_()
         perturbation = self.netG(image+adv_per, label) # Generator produces noise
         # Clipping trick to prevent excessive noise
         adv_images = torch.clamp(perturbation, -self.Epsilon, self.Epsilon) + image
@@ -141,7 +139,7 @@ class Method():
         loss_perturb = torch.mean(torch.norm(perturbation.view(perturbation.shape[0], -1), 2, dim=1))  # type: ignore
 
         loss_G = loss_ul + 0.001 * loss_perturb   # loss_perturb usually <100, weight choice impacts results
-        loss_G.backward() #retain_graph=True)
+        loss_G.backward()
         self.optimizer_G.step()
 
         self.loss_perturb_sum += loss_perturb
